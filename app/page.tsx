@@ -6,6 +6,13 @@ import {
   getCategoryClass, getCategoryEmoji, groupTransactionsByDate
 } from "@/lib/store";
 import { AppData, Transaction, Bill, Budget, Category } from "@/lib/types";
+import {
+  Plus, House, List, CreditCard, PieChart, Settings, Sun, Moon,
+  ArrowUp, ArrowDown, Bell, ChevronRight, Wallet, Receipt, Palette,
+  Trash2, Pencil, PhilippinePeso, Tag, Calendar, StickyNote,
+  FileText, CalendarDays, Building2, Zap, CheckCircle, Circle,
+  Target, X, ArrowUpCircle, ArrowDownCircle
+} from "lucide-react";
 
 const CATEGORIES: Category[] = [
   "Food & Dining","Transport","Shopping","Bills & Utilities",
@@ -17,9 +24,30 @@ const BILL_COLORS = ["#1591DC","#2C5EAD","#4BB8FA","#ff6b6b","#00d9a3","#ff8c42"
 type Tab = "home" | "transactions" | "bills" | "analytics" | "settings";
 
 // ── Icon helper (Font Awesome) ──
-const I = ({ icon, style }: { icon: string; style?: React.CSSProperties }) => (
-  <i className={`fa-solid ${icon}`} style={style} />
-);
+const iconMap: Record<string, React.ElementType> = {
+  "fa-plus": Plus, "fa-house": House, "fa-list-ul": List,
+  "fa-credit-card": CreditCard, "fa-chart-pie": PieChart, "fa-gear": Settings,
+  "fa-sun": Sun, "fa-moon": Moon, "fa-arrow-up": ArrowUp, "fa-arrow-down": ArrowDown,
+  "fa-bell": Bell, "fa-chevron-right": ChevronRight, "fa-wallet": Wallet,
+  "fa-receipt": Receipt, "fa-circle-half-stroke": Palette, "fa-trash-can": Trash2,
+  "fa-trash": Trash2, "fa-pen": Pencil, "fa-peso-sign": PhilippinePeso,
+  "fa-tag": Tag, "fa-calendar": Calendar, "fa-note-sticky": StickyNote,
+  "fa-file-invoice": FileText, "fa-calendar-day": CalendarDays,
+  "fa-building-columns": Building2, "fa-bolt": Zap, "fa-circle-check": CheckCircle,
+  "fa-circle": Circle, "fa-bullseye": Target, "fa-xmark": X,
+  "fa-circle-up": ArrowUpCircle, "fa-circle-down": ArrowDownCircle,
+};
+
+const I = ({ icon, style }: { icon: string; style?: React.CSSProperties }) => {
+  const Icon = iconMap[icon];
+  if (!Icon) return null;
+  const { fontSize, color, ...rest } = style || {};
+  return (
+    <span style={rest}>
+      <Icon size={fontSize ? parseInt(String(fontSize)) : 16} color={color} />
+    </span>
+  );
+};
 
 export default function App() {
   const [data, setData] = useState<AppData>({ transactions: [], bills: [], budgets: [] });
@@ -211,7 +239,9 @@ export default function App() {
           { id:"settings",     icon:"fa-gear",           label:"Settings" },
         ] as const).map(item => (
           <button key={item.id} className={`nav-btn${tab===item.id?" active":""}`} onClick={() => setTab(item.id)}>
-            <I icon={item.icon} />
+            <div className="nav-icon-wrap">
+              <I icon={item.icon} />
+            </div>
             <span>{item.label}</span>
           </button>
         ))}
@@ -251,7 +281,7 @@ function HomeTab({ data, filterMonth, setFilterMonth, monthExpenses, monthIncome
   const recentTxns = [...data.transactions].sort((a:any,b:any) => b.date.localeCompare(a.date)).slice(0,5);
 
   return (
-    <div style={{ paddingTop:"env(safe-area-inset-top)", paddingBottom:110 }}>
+    <div style={{ paddingTop:"env(safe-area-inset-top)", paddingBottom:100 }}>
       {/* Header */}
       <div style={{ padding:"24px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
         <div>
@@ -368,7 +398,7 @@ function TransactionsTab({ transactions, filterMonth, setFilterMonth, fmt, onDel
   const total = filtered.filter((t:Transaction)=>t.type==="expense").reduce((s:number,t:Transaction)=>s+t.amount,0);
 
   return (
-    <div style={{ paddingTop:"env(safe-area-inset-top)", paddingBottom:110 }}>
+    <div style={{ paddingTop:"env(safe-area-inset-top)", paddingBottom:100 }}>
       <div style={{ padding:"24px 20px 14px" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
           <h1 style={{ fontSize:26, fontWeight:800 }}>Transactions</h1>
@@ -410,7 +440,7 @@ function TransactionsTab({ transactions, filterMonth, setFilterMonth, fmt, onDel
 function BillsTab({ bills, fmt, onToggle, onDelete, onEdit, daysUntilDue, totalBillsDue, paidBills, unpaidBills }: any) {
   const paidPct = bills.length > 0 ? (paidBills.length/bills.length)*100 : 0;
   return (
-    <div style={{ paddingTop:"env(safe-area-inset-top)", paddingBottom:110 }}>
+    <div style={{ paddingTop:"env(safe-area-inset-top)", paddingBottom:100 }}>
       <div style={{ padding:"24px 20px 0" }}>
         <h1 style={{ fontSize:26, fontWeight:800, marginBottom:2 }}>Bills & Loans</h1>
         <p style={{ color:"var(--muted)", fontSize:13, marginBottom:14 }}>Recurring payments tracker</p>
@@ -462,7 +492,7 @@ function BillsTab({ bills, fmt, onToggle, onDelete, onEdit, daysUntilDue, totalB
 function AnalyticsTab({ data, filterMonth, setFilterMonth, sortedCats, monthExpenses, monthIncome, fmt, onDeleteBudget, onAddBudget }: any) {
   const net = monthIncome - monthExpenses;
   return (
-    <div style={{ paddingTop:"env(safe-area-inset-top)", paddingBottom:110 }}>
+    <div style={{ paddingTop:"env(safe-area-inset-top)", paddingBottom:100 }}>
       <div style={{ padding:"24px 20px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
         <h1 style={{ fontSize:26, fontWeight:800 }}>Analytics</h1>
         <MonthPicker value={filterMonth} onChange={setFilterMonth} />
@@ -561,7 +591,7 @@ function SettingsTab({ theme, toggleTheme, data, onClearAll }: any) {
   const billCount = data.bills.length;
 
   return (
-    <div style={{ paddingTop:"env(safe-area-inset-top)", paddingBottom:110 }}>
+    <div style={{ paddingTop:"env(safe-area-inset-top)", paddingBottom:100 }}>
       <div style={{ padding:"24px 20px 20px" }}>
         <h1 style={{ fontSize:26, fontWeight:800, marginBottom:4 }}>Settings</h1>
         <p style={{ color:"var(--muted)", fontSize:13 }}>Customize your experience</p>
