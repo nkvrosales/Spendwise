@@ -157,7 +157,7 @@ export default function App() {
       dueDay:parseInt(billForm.dueDate.slice(8,10)), category:billForm.category,
       isPaid:false, color:billForm.color, note:billForm.note,
       month: billForm.recurring ? undefined : (billForm.month || undefined),
-      duration: billForm.recurring ? undefined : (parseInt(billForm.duration) || 1)
+      duration: billForm.recurring ? undefined : (parseInt(String(billForm.duration)) || 1)
     };
     persist({ ...data, bills: [bill, ...data.bills] });
     setSheet("none");
@@ -168,7 +168,7 @@ export default function App() {
     if (!editingBill || !billForm.name || !billForm.amount) return;
     const updated = data.bills.map(b =>
       b.id === editingBill.id
-        ? { ...b, name:billForm.name, amount:parseFloat(billForm.amount), dueDay:parseInt(billForm.dueDate.slice(8,10)), category:billForm.category, color:billForm.color, note:billForm.note, month: billForm.recurring ? undefined : (billForm.month || undefined), duration: billForm.recurring ? undefined : (parseInt(billForm.duration) || 1) }
+        ? { ...b, name:billForm.name, amount:parseFloat(billForm.amount), dueDay:parseInt(billForm.dueDate.slice(8,10)), category:billForm.category, color:billForm.color, note:billForm.note, month: billForm.recurring ? undefined : (billForm.month || undefined), duration: billForm.recurring ? undefined : (parseInt(String(billForm.duration)) || 1) }
         : b
     );
     persist({ ...data, bills: updated });
@@ -821,7 +821,7 @@ function TxnForm({ form, setForm, onSubmit, onClose, isEdit }: any) {
 }
 
 function BillForm({ form, setForm, onSubmit, onClose, isEdit, colors }: any) {
-  const sf = (k: string, v: string) => setForm((f: any) => ({ ...f, [k]: v }));
+  const sf = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
   return (
     <div style={{ padding:"20px 20px 32px" }}>
       <SheetHeader title={isEdit?"Edit Bill":"Add Bill"} onClose={onClose} />
