@@ -83,11 +83,11 @@ export default function App() {
     description:"", date: new Date().toISOString().slice(0,10), note:""
   });
   const [billForm, setBillForm] = useState({
-    name:"", amount:"", dueDate: new Date().toISOString().slice(0,10),
-    category:"Credit Card" as Bill["category"],
+    name:"", amount:"", dueDate:"", category:"Credit Card" as Bill["category"],
     color:BILL_COLORS[0], note:"", month: "", duration: 1, recurring: true
   });
   const [budgetForm, setBudgetForm] = useState({ category:"Food & Dining" as Category, limit:"" });
+  const [billErrors, setBillErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (loading) return;
@@ -151,10 +151,16 @@ export default function App() {
 
   // ── Bills ──
   const addBill = () => {
-    if (!billForm.name || !billForm.amount) return;
+    const errors: Record<string, string> = {};
+    if (!billForm.name.trim()) errors.name = "Bill name is required";
+    if (!billForm.amount || parseFloat(billForm.amount) <= 0) errors.amount = "Amount is required";
+    if (!billForm.dueDate) errors.dueDate = "Select a due date";
+    if (!billForm.recurring && !billForm.month) errors.month = "Select a start month";
+    if (Object.keys(errors).length > 0) { setBillErrors(errors); return; }
+    setBillErrors({});
     const bill: Bill = {
       id: genId(), name:billForm.name, amount:parseFloat(billForm.amount),
-      dueDay:parseInt(billForm.dueDate.slice(8,10)), category:billForm.category,
+      dueDay:parseInt(billForm.dueDate.slice(8,10)) || 1, category:billForm.category,
       isPaid:false, color:billForm.color, note:billForm.note,
       month: billForm.recurring ? undefined : (billForm.month || undefined),
       duration: billForm.recurring ? undefined : (parseInt(String(billForm.duration)) || 1)
@@ -228,23 +234,24 @@ export default function App() {
     catSpending[t.category] = (catSpending[t.category]||0) + t.amount;
   const sortedCats = Object.entries(catSpending).sort(([,a],[,b]) => b-a);
 
-  const daysUntilDue = (dueDay: number) => {
+  const daysUntilDue = (dueDay: number, monthStr?: string) => {
     const today = new Date();
-    const due = new Date(today.getFullYear(), today.getMonth(), dueDay);
-    if (due < today) due.setMonth(due.getMonth()+1);
+    const m = monthStr ? new Date(monthStr + "-01") : today;
+    const due = new Date(m.getFullYear(), m.getMonth(), dueDay);
     return Math.ceil((due.getTime()-today.getTime())/86400000);
   };
 
   const formatDueDay = (dueDay: number, month: string) => {
     const d = new Date(month + "-" + String(dueDay).padStart(2, "0"));
-    return `due ${dueDay}${ordinal(dueDay)} of ${d.toLocaleDateString("en-US", { month: "long" })}`;
+    return `due ${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
   };
 
   const fmt = (a: number) => formatAmount(a);
   const closeSheet = () => {
     setSheet("none"); setEditingTxn(null); setEditingBill(null);
     setForm({ type:"expense", amount:"", category:"Food & Dining", description:"", date: new Date().toISOString().slice(0,10), note:"" });
-    setBillForm({ name:"", amount:"", dueDate: new Date().toISOString().slice(0,10), category:"Credit Card", color:BILL_COLORS[0], note:"", month:"", duration:1, recurring:true });
+    setBillForm({ name:"", amount:"", dueDate:"", category:"Credit Card", color:BILL_COLORS[0], note:"", month:"", duration:1, recurring:true });
+    setBillErrors({});
   };
 
   if (loading) return null;
@@ -257,7 +264,7 @@ export default function App() {
       {tab === "home" && <HomeTab data={data} filterMonth={filterMonth} setFilterMonth={setFilterMonth}
         monthExpenses={monthExpenses} monthIncome={monthIncome} totalUnpaid={totalUnpaid}
         unpaidBills={unpaidBills} sortedCats={sortedCats} fmt={fmt}
-        onAddTxn={() => setSheet("add-txn")} setTab={setTab} theme={theme} toggleTheme={toggleTheme} />}
+        onAddTxn={() => setSheet("add-txn")} setTab={setTab} theme={theme} />}
 
       {tab === "transactions" && <TransactionsTab transactions={data.transactions}
         filterMonth={filterMonth} setFilterMonth={setFilterMonth} fmt={fmt}
@@ -267,7 +274,7 @@ export default function App() {
         onToggle={toggleBillPaid} onDelete={deleteBill} onEdit={openEditBill}
         daysUntilDue={daysUntilDue} totalBillsDue={totalBillsDue}
         paidBills={paidBills} unpaidBills={unpaidBills}
-        formatDueDay={formatDueDay} month={filterMonth} />}
+        formatDueDay={formatDueDay} month={filterMonth} setFilterMonth={setFilterMonth} />}
 
       {tab === "analytics" && <AnalyticsTab data={data} filterMonth={filterMonth}
         setFilterMonth={setFilterMonth} sortedCats={sortedCats}
@@ -275,7 +282,6 @@ export default function App() {
         onDeleteBudget={deleteBudget} onAddBudget={() => setSheet("add-budget")} />}
 
       {tab === "settings" && <SettingsTab theme={theme} toggleTheme={toggleTheme}
-        data={data} onClearAll={() => { if(confirm("Clear all data? This cannot be undone.")) persist({ transactions:[], bills:[], budgets:[] }); }}
         user={username || user?.email || "User"} onLogout={() => { logout(); router.push("/login"); }} />}
 
       {/* ── FAB ── */}
@@ -318,7 +324,7 @@ export default function App() {
             {(sheet==="add-bill"||sheet==="edit-bill") && (
               <BillForm form={billForm} setForm={setBillForm}
                 onSubmit={sheet==="add-bill" ? addBill : updateBill}
-                onClose={closeSheet} isEdit={sheet==="edit-bill"} colors={BILL_COLORS} />
+                onClose={closeSheet} isEdit={sheet==="edit-bill"} colors={BILL_COLORS} errors={billErrors} />
             )}
             {sheet==="add-budget" && (
               <BudgetForm form={budgetForm} setForm={setBudgetForm}
@@ -334,26 +340,16 @@ export default function App() {
 // ══════════════════════════════════════════
 // HOME TAB
 // ══════════════════════════════════════════
-function HomeTab({ data, filterMonth, setFilterMonth, monthExpenses, monthIncome, totalUnpaid, unpaidBills, sortedCats, fmt, onAddTxn, setTab, theme, toggleTheme }: any) {
+function HomeTab({ data, filterMonth, setFilterMonth, monthExpenses, monthIncome, totalUnpaid, unpaidBills, sortedCats, fmt, onAddTxn, setTab, theme }: any) {
   const balance = monthIncome - monthExpenses;
   const recentTxns = [...data.transactions].sort((a:any,b:any) => b.date.localeCompare(a.date)).slice(0,5);
 
   return (
     <div style={{ paddingTop:"env(safe-area-inset-top)", paddingBottom:100 }}>
       {/* Header */}
-      <div style={{ padding:"24px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-        <div>
-          <p style={{ color:"var(--muted)", fontSize:12, fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:2 }}>
-            {new Date(filterMonth+"-01").toLocaleString("default",{month:"long",year:"numeric"})}
-          </p>
-          <h1 style={{ fontSize:28, fontWeight:800, color:"var(--text)" }}>Overview</h1>
-        </div>
-        <div style={{ display:"flex", gap:10, alignItems:"center", marginTop:4 }}>
-          <MonthPicker value={filterMonth} onChange={setFilterMonth} />
-          <button onClick={toggleTheme} style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:10, width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 }}>
-            <I icon={theme==="dark" ? "fa-sun" : "fa-moon"} style={{ color:"var(--accent)", fontSize:15 }} />
-          </button>
-        </div>
+      <div style={{ padding:"24px 20px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <h1 style={{ fontSize:26, fontWeight:800 }}>Overview</h1>
+        <MonthPicker value={filterMonth} onChange={setFilterMonth} />
       </div>
 
       {/* Balance Hero Card */}
@@ -495,13 +491,16 @@ function TransactionsTab({ transactions, filterMonth, setFilterMonth, fmt, onDel
 // ══════════════════════════════════════════
 // BILLS TAB
 // ══════════════════════════════════════════
-function BillsTab({ bills, fmt, onToggle, onDelete, onEdit, daysUntilDue, totalBillsDue, paidBills, unpaidBills, formatDueDay, month }: any) {
+function BillsTab({ bills, fmt, onToggle, onDelete, onEdit, daysUntilDue, totalBillsDue, paidBills, unpaidBills, formatDueDay, month, setFilterMonth }: any) {
   const paidPct = bills.length > 0 ? (paidBills.length/bills.length)*100 : 0;
   return (
     <div style={{ paddingTop:"env(safe-area-inset-top)", paddingBottom:100 }}>
       <div style={{ padding:"24px 20px 0" }}>
-        <h1 style={{ fontSize:26, fontWeight:800, marginBottom:2 }}>Bills & Loans</h1>
-        <p style={{ color:"var(--muted)", fontSize:13, marginBottom:14 }}>Recurring payments tracker</p>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:2 }}>
+          <h1 style={{ fontSize:26, fontWeight:800, margin:0 }}>Bills & Loans</h1>
+          <MonthPicker value={month} onChange={setFilterMonth} />
+        </div>
+        <p style={{ color:"var(--muted)", fontSize:13, marginBottom:14 }}>Payments tracker</p>
 
         {bills.length > 0 && (
           <div className="hero-card fade-up stagger-1" style={{ padding:"18px 20px", marginBottom:16 }}>
@@ -530,13 +529,13 @@ function BillsTab({ bills, fmt, onToggle, onDelete, onEdit, daysUntilDue, totalB
           {unpaidBills.map((b:Bill) => (
             <BillCard key={b.id} bill={b} isPaid={false} fmt={fmt}
               onToggle={()=>onToggle(b.id)} onDelete={()=>onDelete(b.id)} onEdit={()=>onEdit(b)}
-              daysUntil={daysUntilDue(b.dueDay)} formatDueDay={formatDueDay} month={month} />
+              daysUntil={daysUntilDue(b.dueDay, b.month || month)} formatDueDay={formatDueDay} month={month} />
           ))}
           {paidBills.length > 0 && <SectionHeader label="Paid this month" />}
           {paidBills.map((b:Bill) => (
             <BillCard key={b.id} bill={b} isPaid={true} fmt={fmt}
               onToggle={()=>onToggle(b.id)} onDelete={()=>onDelete(b.id)} onEdit={()=>onEdit(b)}
-              daysUntil={daysUntilDue(b.dueDay)} formatDueDay={formatDueDay} month={month} />
+              daysUntil={daysUntilDue(b.dueDay, b.month || month)} formatDueDay={formatDueDay} month={month} />
           ))}
         </div>
       )}
@@ -644,10 +643,7 @@ function AnalyticsTab({ data, filterMonth, setFilterMonth, sortedCats, monthExpe
 // ══════════════════════════════════════════
 // SETTINGS TAB
 // ══════════════════════════════════════════
-function SettingsTab({ theme, toggleTheme, data, onClearAll, user, onLogout }: any) {
-  const txnCount = data.transactions.length;
-  const billCount = data.bills.length;
-
+function SettingsTab({ theme, toggleTheme, user, onLogout }: any) {
   return (
     <div style={{ paddingTop:"env(safe-area-inset-top)", paddingBottom:100 }}>
       <div style={{ padding:"24px 20px 20px" }}>
@@ -691,25 +687,6 @@ function SettingsTab({ theme, toggleTheme, data, onClearAll, user, onLogout }: a
               <input type="checkbox" checked={theme==="dark"} onChange={toggleTheme} />
               <span className="toggle-slider" />
             </label>
-          }
-        />
-      </SettingsSection>
-
-      <SettingsSection title="Data">
-        <SettingsRow icon="fa-receipt" iconColor="#1591DC" label="Transactions" sublabel={`${txnCount} records`} />
-        <div style={{ height:1, background:"var(--border)", margin:"0 -20px 0 46px" }} />
-        <SettingsRow icon="fa-credit-card" iconColor="#2C5EAD" label="Bills" sublabel={`${billCount} bills tracked`} />
-        <div style={{ height:1, background:"var(--border)", margin:"0 -20px 0 46px" }} />
-        <SettingsRow
-          icon="fa-trash-can"
-          iconColor="#2C5EAD"
-          label="Clear All Data"
-          sublabel="Permanently delete everything"
-          right={
-            <button onClick={onClearAll} className="btn-danger" style={{ padding:"7px 14px", borderRadius:10 }}>
-              <I icon="fa-trash" style={{ fontSize:13 }} />
-              <span style={{ marginLeft:5, fontSize:13, fontWeight:600 }}>Clear</span>
-            </button>
           }
         />
       </SettingsSection>
@@ -820,20 +797,20 @@ function TxnForm({ form, setForm, onSubmit, onClose, isEdit }: any) {
   );
 }
 
-function BillForm({ form, setForm, onSubmit, onClose, isEdit, colors }: any) {
+function BillForm({ form, setForm, onSubmit, onClose, isEdit, colors, errors }: any) {
   const sf = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
   return (
     <div style={{ padding:"20px 20px 32px" }}>
       <SheetHeader title={isEdit?"Edit Bill":"Add Bill"} onClose={onClose} />
       <div style={{ display:"flex", flexDirection:"column", gap:11 }}>
-        <FormField label="Bill" icon="fa-file-invoice">
-          <input type="text" placeholder="Enter Bill Name" value={form.name} onChange={e=>sf("name",e.target.value)} />
+        <FormField label="Bill" icon="fa-file-invoice" error={errors?.name}>
+          <input type="text" placeholder="Enter Bill Name" value={form.name} onChange={e=>sf("name",e.target.value)} style={{ borderColor: errors?.name ? "var(--danger)" : undefined }} />
         </FormField>
-        <FormField label="Monthly Amount (₱)" icon="fa-peso-sign">
-          <input type="number" placeholder="0.00" value={form.amount} onChange={e=>sf("amount",e.target.value)} />
+        <FormField label="Monthly Amount (₱)" icon="fa-peso-sign" error={errors?.amount}>
+          <input type="number" placeholder="0.00" value={form.amount} onChange={e=>sf("amount",e.target.value)} style={{ borderColor: errors?.amount ? "var(--danger)" : undefined }} />
         </FormField>
-        <FormField label="Due Day of Month" icon="fa-calendar-day">
-          <input type="date" value={form.dueDate} onChange={e=>sf("dueDate",e.target.value)} />
+        <FormField label="Due Day of Month" icon="fa-calendar-day" error={errors?.dueDate}>
+          <input type="date" value={form.dueDate} onChange={e=>sf("dueDate",e.target.value)} style={{ borderColor: errors?.dueDate ? "var(--danger)" : undefined }} />
         </FormField>
         <FormField label="Category" icon="fa-tag">
           <CategorySelect value={form.category} onChange={v=>sf("category",v)} />
@@ -875,8 +852,8 @@ function BillForm({ form, setForm, onSubmit, onClose, isEdit, colors }: any) {
             border: "1px dashed var(--border)",
             marginTop: 4
           }}>
-            <FormField label="Start Month" icon="fa-calendar">
-              <input type="month" value={form.month} onChange={e=>sf("month",e.target.value)} />
+            <FormField label="Start Month" icon="fa-calendar" error={errors?.month}>
+              <input type="month" value={form.month} onChange={e=>sf("month",e.target.value)} style={{ borderColor: errors?.month ? "var(--danger)" : undefined }} />
             </FormField>
             <FormField label="For how many months?" icon="fa-calendar-day">
               <input type="number" min="1" placeholder="1" value={form.duration} onChange={e=>sf("duration",e.target.value)} />
@@ -1086,7 +1063,7 @@ function SheetHeader({ title, onClose }: { title: string; onClose: () => void })
   );
 }
 
-function FormField({ label, icon, children }: { label: string; icon: string; children: React.ReactNode }) {
+function FormField({ label, icon, children, error }: { label: string; icon: string; children: React.ReactNode; error?: string }) {
   return (
     <div>
       <label style={{ ...labelStyle, display:"flex", alignItems:"center", gap:6 }}>
@@ -1094,6 +1071,7 @@ function FormField({ label, icon, children }: { label: string; icon: string; chi
         {label}
       </label>
       {children}
+      {error && <p style={{ margin:"4px 0 0", fontSize:11, color:"var(--danger)", fontWeight:600 }}>{error}</p>}
     </div>
   );
 }
