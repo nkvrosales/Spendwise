@@ -82,7 +82,7 @@ export default function App() {
     const savedTheme = (localStorage.getItem("theme") as "dark"|"light") || "dark";
     setTheme(savedTheme);
     document.documentElement.setAttribute("data-theme", savedTheme);
-    loadData(user.id).then(setData);
+    loadData(user.id).then(setData).catch(e => console.error("Failed to load data:", e));
   }, [user, loading, router]);
 
   const toggleTheme = () => {
@@ -94,7 +94,13 @@ export default function App() {
 
   const persist = useCallback(async (next: AppData) => {
     setData(next);
-    if (user) await saveData(next, user.id);
+    if (user) {
+      try {
+        await saveData(next, user.id);
+      } catch (e) {
+        console.error("Failed to save data to Supabase:", e);
+      }
+    }
   }, [user]);
 
   // ── Transactions ──

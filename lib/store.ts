@@ -40,6 +40,31 @@ function mapBudget(row: any): Budget {
   };
 }
 
+// Reverse mappings (TypeScript → DB columns)
+function txnToDb(t: Transaction, userId: string) {
+  return {
+    id: t.id, user_id: userId, type: t.type, amount: t.amount,
+    category: t.category, description: t.description, date: t.date,
+    note: t.note || '',
+  };
+}
+
+function billToDb(b: Bill, userId: string) {
+  return {
+    id: b.id, user_id: userId, name: b.name, amount: b.amount,
+    due_day: b.dueDay, category: b.category,
+    is_paid: b.isPaid, paid_month: b.paidMonth || null,
+    color: b.color, note: b.note || '',
+  };
+}
+
+function budgetToDb(b: Budget, userId: string) {
+  return {
+    category: b.category, user_id: userId,
+    limit_amount: b.limit,
+  };
+}
+
 export async function loadData(userId: string): Promise<AppData> {
   const supabase = createClient();
   try {
@@ -64,11 +89,11 @@ export async function saveData(data: AppData, userId: string): Promise<void> {
   await supabase.from("bills").delete().eq("user_id", userId);
   await supabase.from("budgets").delete().eq("user_id", userId);
   if (data.transactions.length > 0)
-    await supabase.from("transactions").insert(data.transactions.map(t => ({ ...t, user_id: userId })));
+    await supabase.from("transactions").insert(data.transactions.map(t => txnToDb(t, userId)));
   if (data.bills.length > 0)
-    await supabase.from("bills").insert(data.bills.map(b => ({ ...b, user_id: userId })));
+    await supabase.from("bills").insert(data.bills.map(b => billToDb(b, userId)));
   if (data.budgets.length > 0)
-    await supabase.from("budgets").insert(data.budgets.map(b => ({ ...b, user_id: userId })));
+    await supabase.from("budgets").insert(data.budgets.map(b => budgetToDb(b, userId)));
 }
 
 export function genId(): string {
