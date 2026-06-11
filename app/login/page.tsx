@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { LoaderCircle } from "lucide-react";
+import { checkRateLimit, recordAttempt } from "@/lib/rate-limit";
 
 export default function LoginPage() {
   const { user, login, loading } = useAuth();
@@ -9,6 +11,14 @@ export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setInterval(() => setCooldown(c => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(id);
+  }, [cooldown]);
 
   useEffect(() => {
     if (!loading && user) router.push("/");
@@ -20,13 +30,25 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    const { allowed, cooldownMs } = checkRateLimit();
+    if (!allowed) {
+      const secs = Math.ceil(cooldownMs / 1000);
+      setCooldown(secs);
+      setError(`Too many attempts. Try again in ${secs}s`);
+      return;
+    }
+
     if (!username.trim() || !password.trim()) {
       setError("Please fill in all fields");
       return;
     }
+    setSubmitting(true);
     const err = await login(username.trim(), password);
     if (err) {
+      recordAttempt();
       setError(err);
+      setSubmitting(false);
     }
   };
 
@@ -44,7 +66,7 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} style={{ display:"flex", flexDirection:"column", gap:14 }}>
           <div>
             <label style={{ fontSize:11, fontWeight:700, color:"var(--muted)", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:"0.06em" }}>Username</label>
-            <input type="text" placeholder="your username" value={username} onChange={e=>setUsername(e.target.value)}
+            <input type="text" placeholder="Enter username" value={username} onChange={e=>setUsername(e.target.value)}
               style={{ background:"var(--surface)", color:"var(--text)", border:"1.5px solid var(--border)", borderRadius:12, padding:"12px 14px", width:"100%", fontSize:15, outline:"none" }} />
           </div>
           <div>
@@ -55,8 +77,9 @@ export default function LoginPage() {
 
           {error && <p style={{ color:"var(--danger)", fontSize:13, margin:0, textAlign:"center" }}>{error}</p>}
 
-          <button type="submit" style={{ background:"linear-gradient(135deg, var(--accent), var(--accent-dark))", color:"white", border:"none", borderRadius:14, padding:"15px", fontWeight:700, fontSize:15, cursor:"pointer", boxShadow:"0 4px 16px rgba(21,145,220,0.3)", marginTop:4 }}>
-            Sign In
+          <button type="submit" disabled={submitting || cooldown > 0} style={{ background:"linear-gradient(135deg, var(--accent), var(--accent-dark))", color:"white", border:"none", borderRadius:14, padding:"15px", fontWeight:700, fontSize:15, cursor:submitting||cooldown>0?"not-allowed":"pointer", opacity:submitting||cooldown>0?0.6:1, boxShadow:"0 4px 16px rgba(21,145,220,0.3)", marginTop:4, display:"flex", alignItems:"center", justifyContent:"center", gap:8, width:"100%" }}>
+            {submitting ? <LoaderCircle className="spin" size={18} /> : null}
+            {submitting ? "Signing in…" : cooldown > 0 ? `Wait ${cooldown}s` : "Sign In"}
           </button>
         </form>
 

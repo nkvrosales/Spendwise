@@ -308,3 +308,7 @@ input:checked + .toggle-slider:before { transform: translateX(22px); }
   .bottom-nav { max-width: 688px; }
 }
 
+/* ── ANIMATIONS ── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin .8s linear infinite; display: inline-flex; }
+
