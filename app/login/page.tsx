@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { Wallet } from "lucide-react";
 
 export default function LoginPage() {
   const { user, login, loading } = useAuth();
@@ -36,7 +35,7 @@ export default function LoginPage() {
       <div style={{ width:"100%", maxWidth:380 }}>
         <div style={{ textAlign:"center", marginBottom:32 }}>
           <div style={{ width:56, height:56, borderRadius:16, background:"var(--accent-pale)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}>
-            <Wallet size={28} color="var(--accent)" />
+            <img src="/spendwise.png" alt="SpendWise" style={{ width:28, height:28, objectFit:"contain" }} />
           </div>
           <h1 style={{ fontSize:28, fontWeight:800, margin:"0 0 4px" }}>SpendWise</h1>
           <p style={{ color:"var(--muted)", fontSize:14, margin:0 }}>Sign in to your account</p>

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { Wallet } from "lucide-react";
+
 
 export default function SignupPage() {
   const { user, signup, loading } = useAuth();
@@ -50,7 +50,7 @@ export default function SignupPage() {
       <div style={{ minHeight:"100vh", background:"var(--bg)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
         <div style={{ textAlign:"center" }}>
           <div style={{ width:56, height:56, borderRadius:16, background:"rgba(0,217,163,0.15)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}>
-            <Wallet size={28} color="var(--success)" />
+            <img src="/spendwise.png" alt="SpendWise" style={{ width:28, height:28, objectFit:"contain" }} />
           </div>
           <h2 style={{ fontSize:22, fontWeight:800, margin:"0 0 8px" }}>Check your email</h2>
           <p style={{ color:"var(--muted)", fontSize:14, maxWidth:300 }}>
@@ -66,7 +66,7 @@ export default function SignupPage() {
       <div style={{ width:"100%", maxWidth:380 }}>
         <div style={{ textAlign:"center", marginBottom:32 }}>
           <div style={{ width:56, height:56, borderRadius:16, background:"var(--accent-pale)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}>
-            <Wallet size={28} color="var(--accent)" />
+            <img src="/spendwise.png" alt="SpendWise" style={{ width:28, height:28, objectFit:"contain" }} />
           </div>
           <h1 style={{ fontSize:28, fontWeight:800, margin:"0 0 4px" }}>Create Account</h1>
           <p style={{ color:"var(--muted)", fontSize:14, margin:0 }}>Start tracking your finances</p>

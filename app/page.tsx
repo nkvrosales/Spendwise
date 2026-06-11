@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   loadData, saveData, genId, currentMonth, formatAmount,
-  getCategoryClass, getCategoryEmoji, groupTransactionsByDate
+  getCategoryClass, getCategoryEmoji, getCategoryIcon, groupTransactionsByDate
 } from "@/lib/store";
 import { AppData, Transaction, Bill, Budget, Category } from "@/lib/types";
 import { useAuth } from "@/lib/auth-context";
@@ -13,7 +13,8 @@ import {
   ArrowUp, ArrowDown, Bell, ChevronRight, Wallet, Receipt, Palette,
   Trash2, Pencil, PhilippinePeso, Tag, Calendar, StickyNote,
   FileText, CalendarDays, Building2, Zap, CheckCircle, Circle,
-  Target, X, ArrowUpCircle, ArrowDownCircle, LogOut, User
+  Target, X, ArrowUpCircle, ArrowDownCircle, LogOut, User,
+  UtensilsCrossed, Car, ShoppingBag, HeartPulse, Clapperboard, Landmark, MoreHorizontal
 } from "lucide-react";
 
 const CATEGORIES: Category[] = [
@@ -40,6 +41,13 @@ const iconMap: Record<string, React.ElementType> = {
   "fa-circle-up": ArrowUpCircle, "fa-circle-down": ArrowDownCircle,
   "fa-right-from-bracket": LogOut,
   "fa-user": User,
+  "fa-utensils-crossed": UtensilsCrossed,
+  "fa-car": Car,
+  "fa-shopping-bag": ShoppingBag,
+  "fa-heart-pulse": HeartPulse,
+  "fa-clapperboard": Clapperboard,
+  "fa-landmark": Landmark,
+  "fa-more-horizontal": MoreHorizontal,
 };
 
 const I = ({ icon, style }: { icon: string; style?: React.CSSProperties }) => {
@@ -373,7 +381,7 @@ function HomeTab({ data, filterMonth, setFilterMonth, monthExpenses, monthIncome
                 <div key={cat} className="card" style={{ padding:"12px 14px" }}>
                   <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      <span style={{ fontSize:20 }}>{getCategoryEmoji(cat)}</span>
+                      <I icon={getCategoryIcon(cat)} style={{ fontSize:20 }} />
                       <span style={{ fontWeight:600, fontSize:14 }}>{cat}</span>
                     </div>
                     <span style={{ fontWeight:800, fontSize:14 }}>{fmt(amt)}</span>
@@ -538,7 +546,7 @@ function AnalyticsTab({ data, filterMonth, setFilterMonth, sortedCats, monthExpe
                 <div key={cat} className="card" style={{ padding:"13px 14px" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      <span style={{ fontSize:20 }}>{getCategoryEmoji(cat)}</span>
+                      <I icon={getCategoryIcon(cat)} style={{ fontSize:20 }} />
                       <div>
                         <p style={{ margin:0, fontWeight:700, fontSize:14 }}>{cat}</p>
                         {budget && <p style={{ margin:0, fontSize:11, color:over?"var(--danger)":"var(--muted)" }}>Budget: {fmt(budget.limit)}{over?" ⚠️":""}</p>}
@@ -576,7 +584,7 @@ function AnalyticsTab({ data, filterMonth, setFilterMonth, sortedCats, monthExpe
                 <div key={b.category} className="card" style={{ padding:"13px 14px" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:7 }}>
-                      <span style={{ fontSize:18 }}>{getCategoryEmoji(b.category)}</span>
+                      <I icon={getCategoryIcon(b.category)} style={{ fontSize:18 }} />
                       <span style={{ fontWeight:700, fontSize:14 }}>{b.category}</span>
                     </div>
                     <div style={{ display:"flex", alignItems:"center", gap:8 }}>
@@ -618,7 +626,15 @@ function SettingsTab({ theme, toggleTheme, data, onClearAll, user, onLogout }: a
       </div>
 
       <SettingsSection title="Account">
-        <SettingsRow icon="fa-user" iconColor="#1591DC" label={user || "User"} sublabel="Signed in" />
+        <div style={{ display:"flex", alignItems:"center", gap:12, padding:"14px 0" }}>
+          <div style={{ width:32, height:32, borderRadius:9, background:"rgba(21,145,220,0.13)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <img src="/spendwise.png" alt="" style={{ width:18, height:18, objectFit:"contain" }} />
+          </div>
+          <div style={{ flex:1 }}>
+            <p style={{ margin:0, fontWeight:600, fontSize:14 }}>{user || "User"}</p>
+            <p style={{ margin:0, fontSize:12, color:"var(--muted)" }}>Signed in</p>
+          </div>
+        </div>
         <div style={{ height:1, background:"var(--border)", margin:"0 -20px 0 46px" }} />
         <SettingsRow
           icon="fa-right-from-bracket"
@@ -804,7 +820,7 @@ function TxnRow({ txn, fmt, onDelete, onEdit }: any) {
     <div className="card" style={{ overflow:"hidden" }}>
       <button onClick={()=>setExpanded(!expanded)} style={{ width:"100%", background:"none", border:"none", cursor:"pointer", padding:"12px 14px", display:"flex", alignItems:"center", gap:11 }}>
         <div style={{ width:42, height:42, borderRadius:13, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, background:"var(--surface2)", flexShrink:0 }}>
-          {getCategoryEmoji(txn.category)}
+          <I icon={getCategoryIcon(txn.category)} style={{ fontSize:20 }} />
         </div>
         <div style={{ flex:1, textAlign:"left" }}>
           <p style={{ margin:0, fontWeight:700, fontSize:14, color:"var(--text)" }}>{txn.description}</p>

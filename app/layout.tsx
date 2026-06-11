@@ -26,6 +26,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" data-theme="dark">
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
+        <link rel="icon" href="/spendwise.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/spendwise.png" />
       </head>
       <body>
         <AuthProvider>

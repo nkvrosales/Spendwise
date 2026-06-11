@@ -138,6 +138,21 @@ export function getCategoryEmoji(cat: string): string {
   return map[cat] ?? "📌";
 }
 
+export function getCategoryIcon(cat: string): string {
+  const map: Record<string, string> = {
+    "Food & Dining": "fa-utensils-crossed",
+    "Transport": "fa-car",
+    "Shopping": "fa-shopping-bag",
+    "Bills & Utilities": "fa-bolt",
+    "Health": "fa-heart-pulse",
+    "Entertainment": "fa-clapperboard",
+    "Credit Card": "fa-credit-card",
+    "Loan": "fa-landmark",
+    "Other": "fa-more-horizontal",
+  };
+  return map[cat] ?? "fa-more-horizontal";
+}
+
 export function groupTransactionsByDate(transactions: Transaction[]) {
   const groups: Record<string, Transaction[]> = {};
   const sorted = [...transactions].sort((a, b) => b.date.localeCompare(a.date));
