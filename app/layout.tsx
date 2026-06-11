@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/lib/auth-context";
 
 export const metadata: Metadata = {
   title: "SpendWise",
@@ -26,7 +27,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body>{children}</body>
+      <body>
+        <AuthProvider>
+          <div className="app-shell">
+            {children}
+          </div>
+        </AuthProvider>
+      </body>
     </html>
   );
 }

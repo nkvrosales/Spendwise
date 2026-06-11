@@ -1,6 +1,5 @@
-import { AppData, Transaction, Bill, Budget } from "./types";
-
-const STORAGE_KEY = "spendwise_data";
+import { AppData, Transaction, Bill, Budget, Category } from "./types";
+import { createClient } from "./supabase";
 
 const defaultData: AppData = {
   transactions: [],
@@ -8,24 +7,72 @@ const defaultData: AppData = {
   budgets: [],
 };
 
-export function loadData(): AppData {
-  if (typeof window === "undefined") return defaultData;
+function mapTransaction(row: any): Transaction {
+  return {
+    id: row.id,
+    type: row.type,
+    amount: parseFloat(row.amount),
+    category: row.category as Category,
+    description: row.description,
+    date: row.date,
+    note: row.note || undefined,
+  };
+}
+
+function mapBill(row: any): Bill {
+  return {
+    id: row.id,
+    name: row.name,
+    amount: parseFloat(row.amount),
+    dueDay: row.due_day,
+    category: row.category as Bill["category"],
+    isPaid: row.is_paid,
+    paidMonth: row.paid_month || undefined,
+    color: row.color,
+    note: row.note || undefined,
+  };
+}
+
+function mapBudget(row: any): Budget {
+  return {
+    category: row.category as Category,
+    limit: parseFloat(row.limit_amount),
+  };
+}
+
+export async function loadData(userId: string): Promise<AppData> {
+  const supabase = createClient();
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultData;
-    return { ...defaultData, ...JSON.parse(raw) };
+    const [txnRes, billRes, budgetRes] = await Promise.all([
+      supabase.from("transactions").select("*").eq("user_id", userId).order("date", { ascending: false }),
+      supabase.from("bills").select("*").eq("user_id", userId),
+      supabase.from("budgets").select("*").eq("user_id", userId),
+    ]);
+    return {
+      transactions: (txnRes.data || []).map(mapTransaction),
+      bills: (billRes.data || []).map(mapBill),
+      budgets: (budgetRes.data || []).map(mapBudget),
+    };
   } catch {
     return defaultData;
   }
 }
 
-export function saveData(data: AppData): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+export async function saveData(data: AppData, userId: string): Promise<void> {
+  const supabase = createClient();
+  await supabase.from("transactions").delete().eq("user_id", userId);
+  await supabase.from("bills").delete().eq("user_id", userId);
+  await supabase.from("budgets").delete().eq("user_id", userId);
+  if (data.transactions.length > 0)
+    await supabase.from("transactions").insert(data.transactions.map(t => ({ ...t, user_id: userId })));
+  if (data.bills.length > 0)
+    await supabase.from("bills").insert(data.bills.map(b => ({ ...b, user_id: userId })));
+  if (data.budgets.length > 0)
+    await supabase.from("budgets").insert(data.budgets.map(b => ({ ...b, user_id: userId })));
 }
 
 export function genId(): string {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+  return crypto.randomUUID();
 }
 
 export function currentMonth(): string {

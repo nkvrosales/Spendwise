@@ -1,17 +1,19 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   loadData, saveData, genId, currentMonth, formatAmount,
   getCategoryClass, getCategoryEmoji, groupTransactionsByDate
 } from "@/lib/store";
 import { AppData, Transaction, Bill, Budget, Category } from "@/lib/types";
+import { useAuth } from "@/lib/auth-context";
 import {
   Plus, House, List, CreditCard, PieChart, Settings, Sun, Moon,
   ArrowUp, ArrowDown, Bell, ChevronRight, Wallet, Receipt, Palette,
   Trash2, Pencil, PhilippinePeso, Tag, Calendar, StickyNote,
   FileText, CalendarDays, Building2, Zap, CheckCircle, Circle,
-  Target, X, ArrowUpCircle, ArrowDownCircle
+  Target, X, ArrowUpCircle, ArrowDownCircle, LogOut, User
 } from "lucide-react";
 
 const CATEGORIES: Category[] = [
@@ -36,6 +38,8 @@ const iconMap: Record<string, React.ElementType> = {
   "fa-building-columns": Building2, "fa-bolt": Zap, "fa-circle-check": CheckCircle,
   "fa-circle": Circle, "fa-bullseye": Target, "fa-xmark": X,
   "fa-circle-up": ArrowUpCircle, "fa-circle-down": ArrowDownCircle,
+  "fa-right-from-bracket": LogOut,
+  "fa-user": User,
 };
 
 const I = ({ icon, style }: { icon: string; style?: React.CSSProperties }) => {
@@ -50,6 +54,8 @@ const I = ({ icon, style }: { icon: string; style?: React.CSSProperties }) => {
 };
 
 export default function App() {
+  const { user, loading, logout, username } = useAuth();
+  const router = useRouter();
   const [data, setData] = useState<AppData>({ transactions: [], bills: [], budgets: [] });
   const [tab, setTab] = useState<Tab>("home");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
@@ -71,12 +77,13 @@ export default function App() {
   const [budgetForm, setBudgetForm] = useState({ category:"Food & Dining" as Category, limit:"" });
 
   useEffect(() => {
-    const saved = loadData();
-    setData(saved);
+    if (loading) return;
+    if (!user) { router.push("/login"); return; }
     const savedTheme = (localStorage.getItem("theme") as "dark"|"light") || "dark";
     setTheme(savedTheme);
     document.documentElement.setAttribute("data-theme", savedTheme);
-  }, []);
+    loadData(user.id).then(setData);
+  }, [user, loading, router]);
 
   const toggleTheme = () => {
     const next = theme === "dark" ? "light" : "dark";
@@ -85,7 +92,10 @@ export default function App() {
     localStorage.setItem("theme", next);
   };
 
-  const persist = useCallback((next: AppData) => { setData(next); saveData(next); }, []);
+  const persist = useCallback(async (next: AppData) => {
+    setData(next);
+    if (user) await saveData(next, user.id);
+  }, [user]);
 
   // ── Transactions ──
   const addTransaction = () => {
@@ -196,8 +206,11 @@ export default function App() {
   const fmt = (a: number) => formatAmount(a);
   const closeSheet = () => { setSheet("none"); setEditingTxn(null); setEditingBill(null); };
 
+  if (loading) return null;
+  if (!user) return null;
+
   return (
-    <div style={{ background:"var(--bg)", minHeight:"100vh", maxWidth:430, margin:"0 auto", position:"relative" }}>
+    <div className="app-container" style={{ background:"var(--bg)", minHeight:"100vh" }}>
 
       {/* ── TABS ── */}
       {tab === "home" && <HomeTab data={data} filterMonth={filterMonth} setFilterMonth={setFilterMonth}
@@ -220,7 +233,8 @@ export default function App() {
         onDeleteBudget={deleteBudget} onAddBudget={() => setSheet("add-budget")} />}
 
       {tab === "settings" && <SettingsTab theme={theme} toggleTheme={toggleTheme}
-        data={data} onClearAll={() => { if(confirm("Clear all data? This cannot be undone.")) persist({ transactions:[], bills:[], budgets:[] }); }} />}
+        data={data} onClearAll={() => { if(confirm("Clear all data? This cannot be undone.")) persist({ transactions:[], bills:[], budgets:[] }); }}
+        user={username || user?.email || "User"} onLogout={() => { logout(); router.push("/login"); }} />}
 
       {/* ── FAB ── */}
       {tab !== "settings" && (
@@ -586,7 +600,7 @@ function AnalyticsTab({ data, filterMonth, setFilterMonth, sortedCats, monthExpe
 // ══════════════════════════════════════════
 // SETTINGS TAB
 // ══════════════════════════════════════════
-function SettingsTab({ theme, toggleTheme, data, onClearAll }: any) {
+function SettingsTab({ theme, toggleTheme, data, onClearAll, user, onLogout }: any) {
   const txnCount = data.transactions.length;
   const billCount = data.bills.length;
 
@@ -597,7 +611,23 @@ function SettingsTab({ theme, toggleTheme, data, onClearAll }: any) {
         <p style={{ color:"var(--muted)", fontSize:13 }}>Customize your experience</p>
       </div>
 
-      {/* App Section */}
+      <SettingsSection title="Account">
+        <SettingsRow icon="fa-user" iconColor="#1591DC" label={user || "User"} sublabel="Signed in" />
+        <div style={{ height:1, background:"var(--border)", margin:"0 -20px 0 46px" }} />
+        <SettingsRow
+          icon="fa-right-from-bracket"
+          iconColor="#2C5EAD"
+          label="Sign Out"
+          sublabel="Switch account"
+          right={
+            <button onClick={onLogout} className="btn-danger" style={{ padding:"7px 14px", borderRadius:10 }}>
+              <I icon="fa-right-from-bracket" style={{ fontSize:13 }} />
+              <span style={{ marginLeft:5, fontSize:13, fontWeight:600 }}>Logout</span>
+            </button>
+          }
+        />
+      </SettingsSection>
+
       <SettingsSection title="Appearance">
         <SettingsRow
           icon="fa-circle-half-stroke"
