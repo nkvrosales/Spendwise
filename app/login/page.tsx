@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, Eye, EyeOff } from "lucide-react";
 import { checkRateLimit, recordAttempt } from "@/lib/rate-limit";
 
 export default function LoginPage() {
@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -69,10 +70,16 @@ export default function LoginPage() {
             <input type="text" placeholder="Enter username" value={username} onChange={e=>setUsername(e.target.value)}
               style={{ background:"var(--surface)", color:"var(--text)", border:"1.5px solid var(--border)", borderRadius:12, padding:"12px 14px", width:"100%", fontSize:15, outline:"none" }} />
           </div>
-          <div>
+          <div style={{ position:"relative" }}>
             <label style={{ fontSize:11, fontWeight:700, color:"var(--muted)", display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:"0.06em" }}>Password</label>
-            <input type="password" placeholder="Enter your password" value={password} onChange={e=>setPassword(e.target.value)}
-              style={{ background:"var(--surface)", color:"var(--text)", border:"1.5px solid var(--border)", borderRadius:12, padding:"12px 14px", width:"100%", fontSize:15, outline:"none" }} />
+            <input type={showPassword?"text":"password"} placeholder="Enter your password" value={password} onChange={e=>setPassword(e.target.value)}
+              style={{ background:"var(--surface)", color:"var(--text)", border:"1.5px solid var(--border)", borderRadius:12, padding:"12px 14px", width:"100%", fontSize:15, outline:"none", paddingRight:40 }} />
+            {password && (
+              <button type="button" onClick={()=>setShowPassword(!showPassword)}
+                style={{ position:"absolute", right:10, bottom:10, background:"none", border:"none", cursor:"pointer", color:"var(--muted)", padding:4, display:"flex" }}>
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            )}
           </div>
 
           {error && <p style={{ color:"var(--danger)", fontSize:13, margin:0, textAlign:"center" }}>{error}</p>}

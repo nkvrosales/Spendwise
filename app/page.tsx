@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   loadData, saveData, genId, currentMonth, formatAmount,
@@ -61,6 +61,11 @@ const I = ({ icon, style }: { icon: string; style?: React.CSSProperties }) => {
   );
 };
 
+function ordinal(n: number) {
+  if (n > 3 && n < 21) return "th";
+  switch (n % 10) { case 1: return "st"; case 2: return "nd"; case 3: return "rd"; default: return "th"; }
+}
+
 export default function App() {
   const { user, loading, logout, username } = useAuth();
   const router = useRouter();
@@ -78,7 +83,7 @@ export default function App() {
     description:"", date: new Date().toISOString().slice(0,10), note:""
   });
   const [billForm, setBillForm] = useState({
-    name:"", amount:"", dueDay:"1",
+    name:"", amount:"", dueDate: new Date().toISOString().slice(0,10),
     category:"Credit Card" as Bill["category"],
     color:BILL_COLORS[0], note:""
   });
@@ -149,19 +154,19 @@ export default function App() {
     if (!billForm.name || !billForm.amount) return;
     const bill: Bill = {
       id: genId(), name:billForm.name, amount:parseFloat(billForm.amount),
-      dueDay:parseInt(billForm.dueDay), category:billForm.category,
+      dueDay:parseInt(billForm.dueDate.slice(8,10)), category:billForm.category,
       isPaid:false, color:billForm.color, note:billForm.note
     };
     persist({ ...data, bills: [bill, ...data.bills] });
     setSheet("none");
-    setBillForm({ name:"", amount:"", dueDay:"1", category:"Credit Card", color:BILL_COLORS[0], note:"" });
+    setBillForm({ name:"", amount:"", dueDate: new Date().toISOString().slice(0,10), category:"Credit Card", color:BILL_COLORS[0], note:"" });
   };
 
   const updateBill = () => {
     if (!editingBill || !billForm.name || !billForm.amount) return;
     const updated = data.bills.map(b =>
       b.id === editingBill.id
-        ? { ...b, name:billForm.name, amount:parseFloat(billForm.amount), dueDay:parseInt(billForm.dueDay), category:billForm.category, color:billForm.color, note:billForm.note }
+        ? { ...b, name:billForm.name, amount:parseFloat(billForm.amount), dueDay:parseInt(billForm.dueDate.slice(8,10)), category:billForm.category, color:billForm.color, note:billForm.note }
         : b
     );
     persist({ ...data, bills: updated });
@@ -182,7 +187,10 @@ export default function App() {
 
   const openEditBill = (b: Bill) => {
     setEditingBill(b);
-    setBillForm({ name:b.name, amount:String(b.amount), dueDay:String(b.dueDay), category:b.category, color:b.color, note:b.note||"" });
+    const today = new Date();
+    const dd = String(b.dueDay).padStart(2,"0");
+    const dueDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${dd}`;
+    setBillForm({ name:b.name, amount:String(b.amount), dueDate, category:b.category, color:b.color, note:b.note||"" });
     setSheet("edit-bill");
   };
 
@@ -200,8 +208,8 @@ export default function App() {
   const monthTransactions = data.transactions.filter(t => t.date.startsWith(filterMonth));
   const monthExpenses = monthTransactions.filter(t => t.type === "expense").reduce((s,t) => s+t.amount, 0);
   const monthIncome   = monthTransactions.filter(t => t.type === "income").reduce((s,t) => s+t.amount, 0);
-  const unpaidBills   = data.bills.filter(b => !b.isPaid || b.paidMonth !== currentMonth());
-  const paidBills     = data.bills.filter(b => b.isPaid && b.paidMonth === currentMonth());
+  const unpaidBills   = data.bills.filter(b => !b.isPaid || b.paidMonth !== filterMonth);
+  const paidBills     = data.bills.filter(b => b.isPaid && b.paidMonth === filterMonth);
   const totalUnpaid   = unpaidBills.reduce((s,b) => s+b.amount, 0);
   const totalBillsDue = data.bills.reduce((s,b) => s+b.amount, 0);
 
@@ -215,6 +223,11 @@ export default function App() {
     const due = new Date(today.getFullYear(), today.getMonth(), dueDay);
     if (due < today) due.setMonth(due.getMonth()+1);
     return Math.ceil((due.getTime()-today.getTime())/86400000);
+  };
+
+  const formatDueDay = (dueDay: number, month: string) => {
+    const d = new Date(month + "-" + String(dueDay).padStart(2, "0"));
+    return `due ${dueDay}${ordinal(dueDay)} of ${d.toLocaleDateString("en-US", { month: "long" })}`;
   };
 
   const fmt = (a: number) => formatAmount(a);
@@ -239,7 +252,8 @@ export default function App() {
       {tab === "bills" && <BillsTab bills={data.bills} fmt={fmt}
         onToggle={toggleBillPaid} onDelete={deleteBill} onEdit={openEditBill}
         daysUntilDue={daysUntilDue} totalBillsDue={totalBillsDue}
-        paidBills={paidBills} unpaidBills={unpaidBills} />}
+        paidBills={paidBills} unpaidBills={unpaidBills}
+        formatDueDay={formatDueDay} month={filterMonth} />}
 
       {tab === "analytics" && <AnalyticsTab data={data} filterMonth={filterMonth}
         setFilterMonth={setFilterMonth} sortedCats={sortedCats}
@@ -465,7 +479,7 @@ function TransactionsTab({ transactions, filterMonth, setFilterMonth, fmt, onDel
 // ══════════════════════════════════════════
 // BILLS TAB
 // ══════════════════════════════════════════
-function BillsTab({ bills, fmt, onToggle, onDelete, onEdit, daysUntilDue, totalBillsDue, paidBills, unpaidBills }: any) {
+function BillsTab({ bills, fmt, onToggle, onDelete, onEdit, daysUntilDue, totalBillsDue, paidBills, unpaidBills, formatDueDay, month }: any) {
   const paidPct = bills.length > 0 ? (paidBills.length/bills.length)*100 : 0;
   return (
     <div style={{ paddingTop:"env(safe-area-inset-top)", paddingBottom:100 }}>
@@ -500,13 +514,13 @@ function BillsTab({ bills, fmt, onToggle, onDelete, onEdit, daysUntilDue, totalB
           {unpaidBills.map((b:Bill) => (
             <BillCard key={b.id} bill={b} isPaid={false} fmt={fmt}
               onToggle={()=>onToggle(b.id)} onDelete={()=>onDelete(b.id)} onEdit={()=>onEdit(b)}
-              daysUntil={daysUntilDue(b.dueDay)} />
+              daysUntil={daysUntilDue(b.dueDay)} formatDueDay={formatDueDay} month={month} />
           ))}
           {paidBills.length > 0 && <SectionHeader label="Paid this month" />}
           {paidBills.map((b:Bill) => (
             <BillCard key={b.id} bill={b} isPaid={true} fmt={fmt}
               onToggle={()=>onToggle(b.id)} onDelete={()=>onDelete(b.id)} onEdit={()=>onEdit(b)}
-              daysUntil={daysUntilDue(b.dueDay)} />
+              daysUntil={daysUntilDue(b.dueDay)} formatDueDay={formatDueDay} month={month} />
           ))}
         </div>
       )}
@@ -714,17 +728,40 @@ function SettingsRow({ icon, iconColor, label, sublabel, right }: any) {
 }
 
 // ══════════════════════════════════════════
-// CATEGORY PICKER
+// CATEGORY SELECT
 // ══════════════════════════════════════════
-function CategoryPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function CategorySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
   return (
-    <div className="cat-picker">
-      {CATEGORIES.map(c => (
-        <button key={c} className={`cat-btn${value===c?" selected":""}`} onClick={()=>onChange(c)}>
-          <I icon={getCategoryIcon(c)} style={{ fontSize:15 }} />
-          {c}
-        </button>
-      ))}
+    <div ref={ref} style={{ position:"relative" }}>
+      <button type="button" onClick={()=>setOpen(!open)}
+        style={{ background:"var(--surface)", color:"var(--text)", border:"1.5px solid var(--border)", borderRadius:12, padding:"10px 14px", width:"100%", fontSize:15, cursor:"pointer", display:"flex", alignItems:"center", gap:8, textAlign:"left" }}>
+        <I icon={getCategoryIcon(value)} style={{ fontSize:15 }} />
+        <span style={{ flex:1 }}>{value}</span>
+        <span style={{ color:"var(--muted)", fontSize:11 }}>▼</span>
+      </button>
+      {open && (
+        <div style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:100, marginTop:4, background:"var(--surface)", border:"1.5px solid var(--border)", borderRadius:12, overflow:"hidden", boxShadow:"0 8px 32px rgba(0,0,0,0.3)" }}>
+          {CATEGORIES.map(c => (
+            <button key={c} type="button" onClick={()=>{onChange(c);setOpen(false)}}
+              style={{ display:"flex", alignItems:"center", gap:8, width:"100%", padding:"10px 14px", border:"none", background:c===value?"var(--accent-pale)":"transparent", color:"var(--text)", fontSize:14, cursor:"pointer", textAlign:"left" }}>
+              <I icon={getCategoryIcon(c)} style={{ fontSize:15 }} />
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -753,7 +790,7 @@ function TxnForm({ form, setForm, onSubmit, onClose, isEdit }: any) {
           <input type="text" placeholder="What was this for?" value={form.description} onChange={e=>sf("description",e.target.value)} />
         </FormField>
         <FormField label="Category" icon="fa-tag">
-          <CategoryPicker value={form.category} onChange={v=>sf("category",v)} />
+          <CategorySelect value={form.category} onChange={v=>sf("category",v)} />
         </FormField>
         <FormField label="Date" icon="fa-calendar">
           <input type="date" value={form.date} onChange={e=>sf("date",e.target.value)} />
@@ -780,10 +817,10 @@ function BillForm({ form, setForm, onSubmit, onClose, isEdit, colors }: any) {
           <input type="number" placeholder="0.00" value={form.amount} onChange={e=>sf("amount",e.target.value)} />
         </FormField>
         <FormField label="Due Day of Month" icon="fa-calendar-day">
-          <input type="number" placeholder="1-31" min="1" max="31" value={form.dueDay} onChange={e=>sf("dueDay",e.target.value)} />
+          <input type="date" value={form.dueDate} onChange={e=>sf("dueDate",e.target.value)} />
         </FormField>
         <FormField label="Category" icon="fa-tag">
-          <CategoryPicker value={form.category} onChange={v=>sf("category",v)} />
+          <CategorySelect value={form.category} onChange={v=>sf("category",v)} />
         </FormField>
         <div>
           <label style={labelStyle}>Color</label>
@@ -810,7 +847,7 @@ function BudgetForm({ form, setForm, onSubmit, onClose }: any) {
       <SheetHeader title="Set Budget" onClose={onClose} />
       <div style={{ display:"flex", flexDirection:"column", gap:11 }}>
         <FormField label="Category" icon="fa-tag">
-          <CategoryPicker value={form.category} onChange={v=>sf("category",v)} />
+          <CategorySelect value={form.category} onChange={v=>sf("category",v)} />
         </FormField>
         <FormField label="Monthly Limit (₱)" icon="fa-peso-sign">
           <input type="number" placeholder="0.00" value={form.limit} onChange={e=>sf("limit",e.target.value)} />
@@ -851,9 +888,10 @@ function TxnRow({ txn, fmt, onDelete, onEdit }: any) {
   );
 }
 
-function BillCard({ bill, isPaid, fmt, onToggle, onDelete, onEdit, daysUntil }: any) {
+function BillCard({ bill, isPaid, fmt, onToggle, onDelete, onEdit, daysUntil, formatDueDay, month }: any) {
   const urgent = !isPaid && daysUntil <= 3;
-  const billIcon = bill.category==="Credit Card"?"fa-credit-card":bill.category==="Loan"?"fa-building-columns":"fa-bolt";
+  const billIcon = getCategoryIcon(bill.category);
+  const daysLabel = daysUntil === 1 ? "1 day left" : `${daysUntil} days left`;
   return (
     <div className="card" style={{ overflow:"hidden", border:urgent?"1px solid rgba(224,62,62,0.35)":"1px solid var(--border)" }}>
       <div style={{ display:"flex", alignItems:"center", gap:12, padding:"13px 14px" }}>
@@ -863,7 +901,7 @@ function BillCard({ bill, isPaid, fmt, onToggle, onDelete, onEdit, daysUntil }: 
         <div style={{ flex:1 }}>
           <p style={{ margin:0, fontWeight:700, fontSize:15, color:isPaid?"var(--muted)":"var(--text)", textDecoration:isPaid?"line-through":"none" }}>{bill.name}</p>
           <p style={{ margin:0, fontSize:12, color:urgent?"var(--danger)":"var(--muted)" }}>
-            Due day {bill.dueDay} · {isPaid ? "✓ Paid" : `${daysUntil}d left`}
+            {formatDueDay(bill.dueDay, month)} · {isPaid ? "✓ Paid" : daysLabel}
           </p>
         </div>
         <p style={{ fontWeight:900, fontSize:16, color:isPaid?"var(--muted)":"var(--text)", margin:0, flexShrink:0 }}>{fmt(bill.amount)}</p>

@@ -318,18 +318,4 @@ input:checked + .toggle-slider:before { transform: translateX(22px); }
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin .8s linear infinite; display: inline-flex; }
 
-/* ── CATEGORY PICKER ── */
-.cat-picker { display: flex; flex-wrap: wrap; gap: 6px; }
-.cat-btn {
-  display: flex; align-items: center; gap: 5px;
-  padding: 7px 11px; border-radius: 9px;
-  font-weight: 600; font-size: 12.5px; cursor: pointer;
-  border: 1.5px solid transparent;
-  transition: all 0.15s;
-}
-.cat-btn:hover { transform: translateY(-1px); }
-.cat-btn.selected { background: var(--accent); color: white; border-color: var(--accent); }
-.cat-btn:not(.selected) { background: var(--surface2); color: var(--text); border-color: var(--border); }
-.cat-btn:not(.selected):hover { border-color: var(--accent); }
-
 
