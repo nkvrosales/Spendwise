@@ -28,6 +28,8 @@ function mapBill(row: any): Bill {
     category: row.category as Bill["category"],
     isPaid: row.is_paid,
     paidMonth: row.paid_month || undefined,
+    month: row.bill_month || undefined,
+    duration: row.duration || undefined,
     color: row.color,
     note: row.note || undefined,
   };
@@ -54,6 +56,8 @@ function billToDb(b: Bill, userId: string) {
     id: b.id, user_id: userId, name: b.name, amount: b.amount,
     due_day: b.dueDay, category: b.category,
     is_paid: b.isPaid, paid_month: b.paidMonth || null,
+    bill_month: b.month || null,
+    duration: b.duration || null,
     color: b.color, note: b.note || '',
   };
 }
@@ -118,6 +122,7 @@ export function getCategoryClass(cat: string): string {
     "Entertainment": "cat-entertainment",
     "Credit Card": "cat-credit-card",
     "Loan": "cat-loan",
+    "Allowance": "cat-allowance",
     "Other": "cat-other",
   };
   return map[cat] ?? "cat-other";
@@ -133,6 +138,7 @@ export function getCategoryEmoji(cat: string): string {
     "Entertainment": "🎮",
     "Credit Card": "💳",
     "Loan": "🏦",
+    "Allowance": "💰",
     "Other": "📌",
   };
   return map[cat] ?? "📌";
@@ -148,6 +154,7 @@ export function getCategoryIcon(cat: string): string {
     "Entertainment": "fa-clapperboard",
     "Credit Card": "fa-credit-card",
     "Loan": "fa-landmark",
+    "Allowance": "fa-wallet",
     "Other": "fa-more-horizontal",
   };
   return map[cat] ?? "fa-more-horizontal";

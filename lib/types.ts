@@ -5,6 +5,7 @@ export type Category =
   | "Bills & Utilities"
   | "Health"
   | "Entertainment"
+  | "Allowance"
   | "Credit Card"
   | "Loan"
   | "Other";
@@ -26,9 +27,11 @@ export interface Bill {
   name: string;
   amount: number;
   dueDay: number; // day of month 1-31
-  category: "Credit Card" | "Loan" | "Bills & Utilities" | "Other";
+  category: "Credit Card" | "Loan" | "Bills & Utilities" | "Allowance" | "Other";
   isPaid: boolean;
   paidMonth?: string; // "YYYY-MM"
+  month?: string; // "YYYY-MM" — start month (if set, not recurring)
+  duration?: number; // number of months the bill applies for (default 1)
   color: string;
   note?: string;
 }

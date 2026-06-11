@@ -19,7 +19,7 @@ import {
 
 const CATEGORIES: Category[] = [
   "Food & Dining","Transport","Shopping","Bills & Utilities",
-  "Health","Entertainment","Credit Card","Loan","Other"
+  "Health","Entertainment","Allowance","Credit Card","Loan","Other"
 ];
 
 const BILL_COLORS = ["#1591DC","#2C5EAD","#4BB8FA","#ff6b6b","#00d9a3","#ff8c42","#a855f7","#ff4db8"];
@@ -56,7 +56,7 @@ const I = ({ icon, style }: { icon: string; style?: React.CSSProperties }) => {
   const { fontSize, color, ...rest } = style || {};
   return (
     <span style={rest}>
-      <Icon size={fontSize ? parseInt(String(fontSize)) : 16} color={color} />
+      <Icon size={fontSize ? parseInt(String(fontSize)) : 16} color={color ?? "currentColor"} />
     </span>
   );
 };
@@ -85,7 +85,7 @@ export default function App() {
   const [billForm, setBillForm] = useState({
     name:"", amount:"", dueDate: new Date().toISOString().slice(0,10),
     category:"Credit Card" as Bill["category"],
-    color:BILL_COLORS[0], note:""
+    color:BILL_COLORS[0], note:"", month: "", duration: 1, recurring: true
   });
   const [budgetForm, setBudgetForm] = useState({ category:"Food & Dining" as Category, limit:"" });
 
@@ -155,18 +155,20 @@ export default function App() {
     const bill: Bill = {
       id: genId(), name:billForm.name, amount:parseFloat(billForm.amount),
       dueDay:parseInt(billForm.dueDate.slice(8,10)), category:billForm.category,
-      isPaid:false, color:billForm.color, note:billForm.note
+      isPaid:false, color:billForm.color, note:billForm.note,
+      month: billForm.recurring ? undefined : (billForm.month || undefined),
+      duration: billForm.recurring ? undefined : (parseInt(billForm.duration) || 1)
     };
     persist({ ...data, bills: [bill, ...data.bills] });
     setSheet("none");
-    setBillForm({ name:"", amount:"", dueDate: new Date().toISOString().slice(0,10), category:"Credit Card", color:BILL_COLORS[0], note:"" });
+    setBillForm({ name:"", amount:"", dueDate: new Date().toISOString().slice(0,10), category:"Credit Card", color:BILL_COLORS[0], note:"", month:"", duration:1, recurring:true });
   };
 
   const updateBill = () => {
     if (!editingBill || !billForm.name || !billForm.amount) return;
     const updated = data.bills.map(b =>
       b.id === editingBill.id
-        ? { ...b, name:billForm.name, amount:parseFloat(billForm.amount), dueDay:parseInt(billForm.dueDate.slice(8,10)), category:billForm.category, color:billForm.color, note:billForm.note }
+        ? { ...b, name:billForm.name, amount:parseFloat(billForm.amount), dueDay:parseInt(billForm.dueDate.slice(8,10)), category:billForm.category, color:billForm.color, note:billForm.note, month: billForm.recurring ? undefined : (billForm.month || undefined), duration: billForm.recurring ? undefined : (parseInt(billForm.duration) || 1) }
         : b
     );
     persist({ ...data, bills: updated });
@@ -190,7 +192,7 @@ export default function App() {
     const today = new Date();
     const dd = String(b.dueDay).padStart(2,"0");
     const dueDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${dd}`;
-    setBillForm({ name:b.name, amount:String(b.amount), dueDate, category:b.category, color:b.color, note:b.note||"" });
+    setBillForm({ name:b.name, amount:String(b.amount), dueDate, category:b.category, color:b.color, note:b.note||"", month: b.month || "", duration: b.duration || 1, recurring: !b.month });
     setSheet("edit-bill");
   };
 
@@ -208,10 +210,18 @@ export default function App() {
   const monthTransactions = data.transactions.filter(t => t.date.startsWith(filterMonth));
   const monthExpenses = monthTransactions.filter(t => t.type === "expense").reduce((s,t) => s+t.amount, 0);
   const monthIncome   = monthTransactions.filter(t => t.type === "income").reduce((s,t) => s+t.amount, 0);
-  const unpaidBills   = data.bills.filter(b => !b.isPaid || b.paidMonth !== filterMonth);
-  const paidBills     = data.bills.filter(b => b.isPaid && b.paidMonth === filterMonth);
+  const visibleBills  = data.bills.filter(b => {
+    if (!b.month) return true;
+    const start = new Date(b.month + "-01");
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + (b.duration || 1));
+    const current = new Date(filterMonth + "-01");
+    return current >= start && current < end;
+  });
+  const unpaidBills   = visibleBills.filter(b => !b.isPaid || b.paidMonth !== filterMonth);
+  const paidBills     = visibleBills.filter(b => b.isPaid && b.paidMonth === filterMonth);
   const totalUnpaid   = unpaidBills.reduce((s,b) => s+b.amount, 0);
-  const totalBillsDue = data.bills.reduce((s,b) => s+b.amount, 0);
+  const totalBillsDue = visibleBills.reduce((s,b) => s+b.amount, 0);
 
   const catSpending: Record<string,number> = {};
   for (const t of monthTransactions.filter(t => t.type === "expense"))
@@ -231,7 +241,11 @@ export default function App() {
   };
 
   const fmt = (a: number) => formatAmount(a);
-  const closeSheet = () => { setSheet("none"); setEditingTxn(null); setEditingBill(null); };
+  const closeSheet = () => {
+    setSheet("none"); setEditingTxn(null); setEditingBill(null);
+    setForm({ type:"expense", amount:"", category:"Food & Dining", description:"", date: new Date().toISOString().slice(0,10), note:"" });
+    setBillForm({ name:"", amount:"", dueDate: new Date().toISOString().slice(0,10), category:"Credit Card", color:BILL_COLORS[0], note:"", month:"", duration:1, recurring:true });
+  };
 
   if (loading) return null;
   if (!user) return null;
@@ -249,7 +263,7 @@ export default function App() {
         filterMonth={filterMonth} setFilterMonth={setFilterMonth} fmt={fmt}
         onDelete={deleteTransaction} onEdit={openEditTxn} />}
 
-      {tab === "bills" && <BillsTab bills={data.bills} fmt={fmt}
+      {tab === "bills" && <BillsTab bills={visibleBills} fmt={fmt}
         onToggle={toggleBillPaid} onDelete={deleteBill} onEdit={openEditBill}
         daysUntilDue={daysUntilDue} totalBillsDue={totalBillsDue}
         paidBills={paidBills} unpaidBills={unpaidBills}
@@ -281,10 +295,12 @@ export default function App() {
           { id:"settings",     icon:"fa-gear",           label:"Settings" },
         ] as const).map(item => (
           <button key={item.id} className={`nav-btn${tab===item.id?" active":""}`} onClick={() => setTab(item.id)}>
-            <div className="nav-icon-wrap">
-              <I icon={item.icon} />
+            <div className={`nav-item${tab===item.id?" active":""}`}>
+              <div className="nav-icon-wrap">
+                <I icon={item.icon} />
+              </div>
+              <span>{item.label}</span>
             </div>
-            <span>{item.label}</span>
           </button>
         ))}
       </nav>
@@ -810,8 +826,8 @@ function BillForm({ form, setForm, onSubmit, onClose, isEdit, colors }: any) {
     <div style={{ padding:"20px 20px 32px" }}>
       <SheetHeader title={isEdit?"Edit Bill":"Add Bill"} onClose={onClose} />
       <div style={{ display:"flex", flexDirection:"column", gap:11 }}>
-        <FormField label="Bill Name" icon="fa-file-invoice">
-          <input type="text" placeholder="e.g. BPI Credit Card" value={form.name} onChange={e=>sf("name",e.target.value)} />
+        <FormField label="Bill" icon="fa-file-invoice">
+          <input type="text" placeholder="Enter Bill Name" value={form.name} onChange={e=>sf("name",e.target.value)} />
         </FormField>
         <FormField label="Monthly Amount (₱)" icon="fa-peso-sign">
           <input type="number" placeholder="0.00" value={form.amount} onChange={e=>sf("amount",e.target.value)} />
@@ -822,6 +838,51 @@ function BillForm({ form, setForm, onSubmit, onClose, isEdit, colors }: any) {
         <FormField label="Category" icon="fa-tag">
           <CategorySelect value={form.category} onChange={v=>sf("category",v)} />
         </FormField>
+        <div>
+          <div 
+            onClick={() => sf("recurring", !form.recurring)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "12px 14px",
+              borderRadius: "12px",
+              background: "var(--surface2)",
+              border: "1.5px solid var(--border)",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              marginTop: 4
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <I icon="fa-circle-check" style={{ color: form.recurring ? "var(--accent)" : "var(--muted)", fontSize: 16 }} />
+              <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Recurring every month</span>
+            </div>
+            <label className="toggle-switch" onClick={e => e.stopPropagation()}>
+              <input type="checkbox" checked={form.recurring} onChange={e => sf("recurring", e.target.checked)} />
+              <span className="toggle-slider" />
+            </label>
+          </div>
+        </div>
+        {!form.recurring && (
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 11,
+            padding: "14px",
+            borderRadius: "12px",
+            background: "var(--surface2)",
+            border: "1px dashed var(--border)",
+            marginTop: 4
+          }}>
+            <FormField label="Start Month" icon="fa-calendar">
+              <input type="month" value={form.month} onChange={e=>sf("month",e.target.value)} />
+            </FormField>
+            <FormField label="For how many months?" icon="fa-calendar-day">
+              <input type="number" min="1" placeholder="1" value={form.duration} onChange={e=>sf("duration",e.target.value)} />
+            </FormField>
+          </div>
+        )}
         <div>
           <label style={labelStyle}>Color</label>
           <div style={{ display:"flex", gap:9, flexWrap:"wrap", marginTop:4 }}>
@@ -892,6 +953,9 @@ function BillCard({ bill, isPaid, fmt, onToggle, onDelete, onEdit, daysUntil, fo
   const urgent = !isPaid && daysUntil <= 3;
   const billIcon = getCategoryIcon(bill.category);
   const daysLabel = daysUntil === 1 ? "1 day left" : `${daysUntil} days left`;
+  const durationLabel = bill.month
+    ? (bill.duration > 1 ? ` · Installment (${bill.duration} mos)` : " · One-time")
+    : "";
   return (
     <div className="card" style={{ overflow:"hidden", border:urgent?"1px solid rgba(224,62,62,0.35)":"1px solid var(--border)" }}>
       <div style={{ display:"flex", alignItems:"center", gap:12, padding:"13px 14px" }}>
@@ -901,7 +965,7 @@ function BillCard({ bill, isPaid, fmt, onToggle, onDelete, onEdit, daysUntil, fo
         <div style={{ flex:1 }}>
           <p style={{ margin:0, fontWeight:700, fontSize:15, color:isPaid?"var(--muted)":"var(--text)", textDecoration:isPaid?"line-through":"none" }}>{bill.name}</p>
           <p style={{ margin:0, fontSize:12, color:urgent?"var(--danger)":"var(--muted)" }}>
-            {formatDueDay(bill.dueDay, month)} · {isPaid ? "✓ Paid" : daysLabel}
+            {formatDueDay(bill.dueDay, month)} · {isPaid ? "✓ Paid" : daysLabel}{durationLabel}
           </p>
         </div>
         <p style={{ fontWeight:900, fontSize:16, color:isPaid?"var(--muted)":"var(--text)", margin:0, flexShrink:0 }}>{fmt(bill.amount)}</p>
@@ -939,9 +1003,61 @@ function StatPill({ icon, label, value, color }: any) {
 }
 
 function MonthPicker({ value, onChange }: any) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const date = new Date(value + "-01");
+  const label = isNaN(date.getTime()) ? value : date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+  const handleClick = () => {
+    if (inputRef.current) {
+      try {
+        inputRef.current.showPicker();
+      } catch (e) {
+        inputRef.current.click();
+      }
+    }
+  };
+
   return (
-    <input type="month" value={value} onChange={e=>onChange(e.target.value)}
-      style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:10, padding:"6px 10px", color:"var(--text)", fontSize:12, fontWeight:700, width:"auto", cursor:"pointer" }} />
+    <div style={{ position: "relative", display: "inline-block" }}>
+      <button 
+        type="button"
+        onClick={handleClick}
+        style={{
+          background: "var(--surface)",
+          border: "1.5px solid var(--border)",
+          borderRadius: "10px",
+          padding: "6px 12px",
+          color: "var(--text)",
+          fontSize: "12px",
+          fontWeight: 700,
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          cursor: "pointer",
+          transition: "all 0.2s ease",
+          boxShadow: "var(--card-shadow)"
+        }}
+      >
+        <span>{label}</span>
+        <I icon="fa-calendar" style={{ fontSize: 13, color: "var(--muted)" }} />
+      </button>
+      <input 
+        ref={inputRef}
+        type="month" 
+        value={value} 
+        onChange={e => onChange(e.target.value)}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          opacity: 0,
+          pointerEvents: "none",
+          zIndex: -1
+        }} 
+      />
+    </div>
   );
 }
 

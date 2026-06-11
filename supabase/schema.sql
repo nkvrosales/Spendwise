@@ -27,6 +27,8 @@ CREATE TABLE bills (
   category TEXT NOT NULL,
   is_paid BOOLEAN NOT NULL DEFAULT FALSE,
   paid_month TEXT,
+  bill_month TEXT,
+  duration INTEGER,
   color TEXT NOT NULL DEFAULT '#1591DC',
   note TEXT DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
