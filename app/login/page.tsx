@@ -77,7 +77,7 @@ export default function LoginPage() {
 
           {error && <p style={{ color:"var(--danger)", fontSize:13, margin:0, textAlign:"center" }}>{error}</p>}
 
-          <button type="submit" disabled={submitting || cooldown > 0} style={{ background:"linear-gradient(135deg, var(--accent), var(--accent-dark))", color:"white", border:"none", borderRadius:14, padding:"15px", fontWeight:700, fontSize:15, cursor:submitting||cooldown>0?"not-allowed":"pointer", opacity:submitting||cooldown>0?0.6:1, boxShadow:"0 4px 16px rgba(21,145,220,0.3)", marginTop:4, display:"flex", alignItems:"center", justifyContent:"center", gap:8, width:"100%" }}>
+          <button type="submit" disabled={submitting || cooldown > 0} className="btn-primary" style={{ marginTop:4 }}>
             {submitting ? <LoaderCircle className="spin" size={18} /> : null}
             {submitting ? "Signing in…" : cooldown > 0 ? `Wait ${cooldown}s` : "Sign In"}
           </button>

@@ -714,6 +714,22 @@ function SettingsRow({ icon, iconColor, label, sublabel, right }: any) {
 }
 
 // ══════════════════════════════════════════
+// CATEGORY PICKER
+// ══════════════════════════════════════════
+function CategoryPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="cat-picker">
+      {CATEGORIES.map(c => (
+        <button key={c} className={`cat-btn${value===c?" selected":""}`} onClick={()=>onChange(c)}>
+          <I icon={getCategoryIcon(c)} style={{ fontSize:15 }} />
+          {c}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════
 // FORMS
 // ══════════════════════════════════════════
 function TxnForm({ form, setForm, onSubmit, onClose, isEdit }: any) {
@@ -737,9 +753,7 @@ function TxnForm({ form, setForm, onSubmit, onClose, isEdit }: any) {
           <input type="text" placeholder="What was this for?" value={form.description} onChange={e=>sf("description",e.target.value)} />
         </FormField>
         <FormField label="Category" icon="fa-tag">
-          <select value={form.category} onChange={e=>sf("category",e.target.value)}>
-            {CATEGORIES.map(c=><option key={c} value={c}>{getCategoryEmoji(c)} {c}</option>)}
-          </select>
+          <CategoryPicker value={form.category} onChange={v=>sf("category",v)} />
         </FormField>
         <FormField label="Date" icon="fa-calendar">
           <input type="date" value={form.date} onChange={e=>sf("date",e.target.value)} />
@@ -769,9 +783,7 @@ function BillForm({ form, setForm, onSubmit, onClose, isEdit, colors }: any) {
           <input type="number" placeholder="1-31" min="1" max="31" value={form.dueDay} onChange={e=>sf("dueDay",e.target.value)} />
         </FormField>
         <FormField label="Category" icon="fa-tag">
-          <select value={form.category} onChange={e=>sf("category",e.target.value)}>
-            {(["Credit Card","Loan","Bills & Utilities","Other"] as const).map(c=><option key={c} value={c}>{c}</option>)}
-          </select>
+          <CategoryPicker value={form.category} onChange={v=>sf("category",v)} />
         </FormField>
         <div>
           <label style={labelStyle}>Color</label>
@@ -798,9 +810,7 @@ function BudgetForm({ form, setForm, onSubmit, onClose }: any) {
       <SheetHeader title="Set Budget" onClose={onClose} />
       <div style={{ display:"flex", flexDirection:"column", gap:11 }}>
         <FormField label="Category" icon="fa-tag">
-          <select value={form.category} onChange={e=>sf("category",e.target.value)}>
-            {CATEGORIES.map(c=><option key={c} value={c}>{getCategoryEmoji(c)} {c}</option>)}
-          </select>
+          <CategoryPicker value={form.category} onChange={v=>sf("category",v)} />
         </FormField>
         <FormField label="Monthly Limit (₱)" icon="fa-peso-sign">
           <input type="number" placeholder="0.00" value={form.limit} onChange={e=>sf("limit",e.target.value)} />
