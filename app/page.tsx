@@ -869,7 +869,7 @@ function BillForm({ form, setForm, onSubmit, onClose, isEdit, colors, errors }: 
           <input type="number" placeholder="0.00" value={form.amount} onChange={e=>sf("amount",e.target.value)} style={{ borderColor: errors?.amount ? "var(--danger)" : undefined }} />
         </FormField>
         <FormField label="Due Day of Month" icon="fa-calendar-day" error={errors?.dueDate}>
-          <div style={{ position: "relative" }}>
+          <div style={{ position: "relative", overflow: "hidden" }}>
             <div style={{
               background: "var(--surface2)", border: `1.5px solid ${errors?.dueDate ? "var(--danger)" : "var(--border)"}`,
               borderRadius: 12, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8,
@@ -879,7 +879,7 @@ function BillForm({ form, setForm, onSubmit, onClose, isEdit, colors, errors }: 
               {form.dueDate ? new Date(form.dueDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Select a date"}
             </div>
             <input type="date" value={form.dueDate} onChange={e => sf("dueDate", e.target.value)}
-              style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }} />
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.01, cursor: "pointer", fontSize: 16 }} />
           </div>
         </FormField>
         <FormField label="Category" icon="fa-tag">
@@ -1054,55 +1054,28 @@ function MonthPicker({ value, onChange }: any) {
   const date = new Date(value + "-01");
   const label = isNaN(date.getTime()) ? value : date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
-  const handleClick = () => {
-    if (inputRef.current) {
-      try {
-        inputRef.current.showPicker();
-      } catch (e) {
-        inputRef.current.click();
-      }
-    }
-  };
-
   return (
-    <div style={{ position: "relative", display: "inline-block" }}>
-      <button 
-        type="button"
-        onClick={handleClick}
-        style={{
-          background: "var(--surface)",
-          border: "1.5px solid var(--border)",
-          borderRadius: "10px",
-          padding: "6px 12px",
-          color: "var(--text)",
-          fontSize: "12px",
-          fontWeight: 700,
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          cursor: "pointer",
-          transition: "all 0.2s ease",
-          boxShadow: "var(--card-shadow)"
-        }}
-      >
+    <div style={{ position: "relative", display: "inline-block", overflow: "hidden" }}>
+      <div style={{
+        background: "var(--surface)", border: "1.5px solid var(--border)",
+        borderRadius: "10px", padding: "6px 12px",
+        color: "var(--text)", fontSize: "12px", fontWeight: 700,
+        display: "flex", alignItems: "center", gap: "10px",
+        cursor: "pointer", transition: "all 0.2s ease", boxShadow: "var(--card-shadow)",
+        pointerEvents: "none"
+      }}>
         <span>{label}</span>
         <I icon="fa-calendar" style={{ fontSize: 13, color: "var(--muted)" }} />
-      </button>
-      <input 
+      </div>
+      <input
         ref={inputRef}
-        type="month" 
-        value={value} 
+        type="month"
+        value={value}
         onChange={e => onChange(e.target.value)}
         style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          opacity: 0,
-          pointerEvents: "none",
-          zIndex: -1
-        }} 
+          position: "absolute", inset: 0, width: "100%", height: "100%",
+          opacity: 0.01, cursor: "pointer", fontSize: 16
+        }}
       />
     </div>
   );
