@@ -138,9 +138,10 @@ html, body {
   background: linear-gradient(135deg, var(--accent), var(--accent-dark));
   display: flex; align-items: center; justify-content: center;
   z-index: 40;
-  transition: transform 0.18s ease;
+  transition: transform 0.18s ease, filter 0.18s ease;
   cursor: pointer; border: none;
 }
+.fab:hover { filter: brightness(0.88); }
 .fab:active { transform: scale(0.92); }
 
 /* ── FORM INPUTS ── */
@@ -292,16 +293,27 @@ input:checked + .toggle-slider:before { transform: translateX(22px); }
   border: 1px solid var(--border); border-radius: 10px;
   padding: 7px 14px; font-size: 13px; font-weight: 600;
   cursor: pointer; display: flex; align-items: center; gap: 5px;
-  transition: background 0.2s;
+  transition: background 0.2s, filter 0.2s;
 }
-.btn-ghost:active { opacity: 0.7; }
+.btn-ghost:hover { filter: brightness(0.92); }
+.btn-ghost:active { filter: brightness(0.85); }
 
 .btn-danger {
   background: rgba(224,62,62,0.12);
   color: var(--danger); border: none; border-radius: 10px;
   padding: 7px 14px; font-size: 13px; font-weight: 600;
   cursor: pointer; display: flex; align-items: center; gap: 5px;
+  transition: filter 0.2s;
 }
+.btn-danger:hover { filter: brightness(0.88); }
+.btn-danger:active { filter: brightness(0.8); }
+
+.btn-dialog-cancel { transition: filter 0.2s; }
+.btn-dialog-cancel:hover { filter: brightness(0.92); }
+.btn-dialog-cancel:active { filter: brightness(0.85); }
+.btn-dialog-delete { transition: filter 0.2s; }
+.btn-dialog-delete:hover { filter: brightness(0.88); }
+.btn-dialog-delete:active { filter: brightness(0.8); }
 
 /* Type toggle */
 .type-toggle { display: flex; gap: 6px; background: var(--surface2); border-radius: 14px; padding: 4px; }
@@ -324,6 +336,10 @@ input:checked + .toggle-slider:before { transform: translateX(22px); }
 @media (min-width: 640px) {
   .app-container { max-width: 560px; }
   .bottom-nav { max-width: 528px; }
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 @media (min-width: 1024px) {
   .app-container { max-width: 720px; }

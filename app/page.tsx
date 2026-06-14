@@ -88,6 +88,8 @@ export default function App() {
   });
   const [budgetForm, setBudgetForm] = useState({ category:"Food & Dining" as Category, limit:"" });
   const [billErrors, setBillErrors] = useState<Record<string, string>>({});
+  const [confirmDelete, setConfirmDelete] = useState<Bill | null>(null);
+  const [toast, setToast] = useState("");
 
   useEffect(() => {
     if (loading) return;
@@ -191,7 +193,17 @@ export default function App() {
     persist({ ...data, bills: updated });
   };
 
-  const deleteBill = (id: string) => persist({ ...data, bills: data.bills.filter(b => b.id !== id) });
+  const deleteBill = (id: string) => {
+    const bill = data.bills.find(b => b.id === id);
+    if (bill) setConfirmDelete(bill);
+  };
+  const confirmDeleteBill = () => {
+    if (!confirmDelete) return;
+    persist({ ...data, bills: data.bills.filter(b => b.id !== confirmDelete.id) });
+    setConfirmDelete(null);
+    setToast("Bill deleted");
+    setTimeout(() => setToast(""), 2500);
+  };
 
   const openEditBill = (b: Bill) => {
     setEditingBill(b);
@@ -310,6 +322,53 @@ export default function App() {
           </button>
         ))}
       </nav>
+
+      {/* ── CONFIRM DIALOG ── */}
+      {confirmDelete && (
+        <>
+          <div className="sheet-overlay" onClick={() => setConfirmDelete(null)} />
+          <div className="sheet" style={{ maxWidth: 360, margin: "0 auto" }}>
+            <div style={{ padding: "28px 24px 24px", display: "flex", flexDirection: "column", gap: 14, textAlign: "center", alignItems: "center" }}>
+              <div style={{ width: 52, height: 52, borderRadius: 16, background: "rgba(224,62,62,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <I icon="fa-trash-can" style={{ fontSize: 24, color: "var(--danger)" }} />
+              </div>
+              <div>
+                <p style={{ margin: "0 0 4px", fontWeight: 700, fontSize: 17, color: "var(--text)" }}>Delete bill?</p>
+                <p style={{ margin: 0, fontSize: 13, color: "var(--muted)", lineHeight: 1.5 }}>
+                  Are you sure you want to delete <strong>"{confirmDelete.name}"</strong>? This action cannot be undone.
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: 10, width: "100%", marginTop: 6 }}>
+                <button onClick={() => setConfirmDelete(null)}
+                  className="btn-dialog-cancel"
+                  style={{ flex: 1, padding: "13px", borderRadius: 12, border: "1.5px solid var(--border)", background: "var(--surface2)", color: "var(--text)", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+                  Cancel
+                </button>
+                <button onClick={confirmDeleteBill}
+                  className="btn-dialog-delete"
+                  style={{ flex: 1, padding: "13px", borderRadius: 12, border: "none", background: "var(--danger)", color: "white", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── TOAST ── */}
+      {toast && (
+        <div style={{
+          position: "fixed", bottom: 100, left: "50%", transform: "translateX(-50%)",
+          zIndex: 200, background: "var(--surface)", border: "1px solid var(--border)",
+          borderRadius: 14, padding: "12px 20px", boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+          display: "flex", alignItems: "center", gap: 8,
+          fontSize: 14, fontWeight: 600, color: "var(--text)",
+          animation: "toastIn 0.25s ease"
+        }}>
+          <I icon="fa-circle-check" style={{ color: "var(--success)", fontSize: 16 }} />
+          {toast}
+        </div>
+      )}
 
       {/* ── SHEETS ── */}
       {sheet !== "none" && (
