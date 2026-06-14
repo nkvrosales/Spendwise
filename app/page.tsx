@@ -869,7 +869,18 @@ function BillForm({ form, setForm, onSubmit, onClose, isEdit, colors, errors }: 
           <input type="number" placeholder="0.00" value={form.amount} onChange={e=>sf("amount",e.target.value)} style={{ borderColor: errors?.amount ? "var(--danger)" : undefined }} />
         </FormField>
         <FormField label="Due Day of Month" icon="fa-calendar-day" error={errors?.dueDate}>
-          <input type="date" value={form.dueDate} onChange={e=>sf("dueDate",e.target.value)} style={{ borderColor: errors?.dueDate ? "var(--danger)" : undefined }} />
+          <div style={{ position: "relative" }}>
+            <div style={{
+              background: "var(--surface2)", border: `1.5px solid ${errors?.dueDate ? "var(--danger)" : "var(--border)"}`,
+              borderRadius: 12, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8,
+              color: form.dueDate ? "var(--text)" : "var(--muted)", fontSize: 15, pointerEvents: "none"
+            }}>
+              <I icon="fa-calendar" style={{ fontSize: 14, color: "var(--accent)" }} />
+              {form.dueDate ? new Date(form.dueDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Select a date"}
+            </div>
+            <input type="date" value={form.dueDate} onChange={e => sf("dueDate", e.target.value)}
+              style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }} />
+          </div>
         </FormField>
         <FormField label="Category" icon="fa-tag">
           <CategorySelect value={form.category} onChange={v=>sf("category",v)} />
